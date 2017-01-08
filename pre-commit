@@ -1,0 +1,47 @@
+#!/usr/bin/env python3.5
+
+import os
+import sys
+import logging
+
+from subprocess import Popen, PIPE
+
+
+def get_changed_articles_files():
+    params = ['git', 'diff', '--cached', '--name-only', './articles']
+    changed_articles_files = []
+    with Popen(params, stdout=PIPE) as git_process:
+        for changed_article_file in git_process.stdout:
+            changed_articles_files.append(changed_article_file.strip().decode('utf-8'))
+    return changed_articles_files
+
+
+def ganerate_site():
+    site_generator = os.path.join(os.path.abspath(os.curdir), 'site_generator.py')
+    params = ['python3.5', site_generator]
+    site_generator_proc = Popen(params, stdout=PIPE)
+    site_generator_proc.wait()
+    return site_generator_proc.returncode
+
+
+if __name__ == '__main__':
+    logging.basicConfig(
+        level=logging.INFO,
+        format=u'%(filename)s# %(levelname)-8s [%(asctime)s] %(message)s',
+        datefmt=u'%m/%d/%Y %I:%M:%S %p'
+    )
+
+    changed_articles_files = get_changed_articles_files()
+
+    if len(changed_articles_files) != 0:
+        logging.warning(
+            '''
+            Markdown source files changes are detected. The site will be rebuilt. Files with changes:
+            '''
+        )
+        for changed_article_file in changed_articles_files:
+            logging.warning(changed_article_file)
+        sys.exit(ganerate_site())
+    else:
+        logging.info('Markdown source files changes are not detected')
+        sys.exit()
